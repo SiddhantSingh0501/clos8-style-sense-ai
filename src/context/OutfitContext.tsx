@@ -1,10 +1,10 @@
 
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { Outfit, ClothingItem } from '@/types';
-import { useWardrobe } from './WardrobeContext';
+import { useWardrobe } from '@/hooks/useWardrobeContext';
 import { useToast } from '@/hooks/use-toast';
 import { v4 as uuidv4 } from '@/utils/uuid';
-import { getOutfitSuggestions, findMatchingItems } from '@/services/geminiService';
+import { getOutfitSuggestions, findMatchingItems, MatchResponse } from '@/services/geminiService';
 
 interface OutfitContextType {
   weeklyOutfits: Outfit[];
@@ -112,7 +112,7 @@ export function OutfitProvider({ children }: { children: ReactNode }) {
             selectedItem, 
             categoryMapping, 
             subcategoryMapping
-          );
+          ) as MatchResponse;
           
           // Find matching items from the wardrobe based on AI suggestions
           const availableItems = startWithUpper ? bottomItems : upperItems;
