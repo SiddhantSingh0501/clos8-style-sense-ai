@@ -1,4 +1,3 @@
-
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { Outfit, ClothingItem } from '@/types';
 import { useWardrobe } from './WardrobeContext';
@@ -118,7 +117,7 @@ export function OutfitProvider({ children }: { children: ReactNode }) {
   };
 
   const getCurrentOutfit = () => {
-    const currentDay = new Date().toLocaleDateString('en-US', { weekday: 'lowercase' });
+    const currentDay = new Date().toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase();
     return weeklyOutfits.find(outfit => outfit.day === currentDay);
   };
 
