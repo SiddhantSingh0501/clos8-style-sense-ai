@@ -1,4 +1,3 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -15,6 +14,7 @@ import DashboardPage from "./pages/DashboardPage";
 import WardrobePage from "./pages/WardrobePage";
 import OutfitsPage from "./pages/OutfitsPage";
 import NotFoundPage from "./pages/NotFoundPage";
+import SettingsPage from "./pages/SettingsPage";
 
 import { ProtectedRoute } from "./components/ProtectedRoute";
 
@@ -57,6 +57,14 @@ const App = () => (
                   element={
                     <ProtectedRoute>
                       <OutfitsPage />
+                    </ProtectedRoute>
+                  } 
+                />
+                <Route 
+                  path="/settings" 
+                  element={
+                    <ProtectedRoute>
+                      <SettingsPage />
                     </ProtectedRoute>
                   } 
                 />
