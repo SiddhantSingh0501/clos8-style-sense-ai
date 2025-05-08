@@ -1,4 +1,3 @@
-
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { ClothingItem, ClothingType, ClothingCategory, ClothingSubcategory } from '@/types';
 import { v4 as uuidv4 } from '@/utils/uuid';
