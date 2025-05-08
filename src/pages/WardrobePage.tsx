@@ -1,38 +1,65 @@
-
-import { useState, ChangeEvent } from 'react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { useWardrobe } from '@/context/WardrobeContext';
-import { ClothingItem, ClothingType } from '@/types';
-import { uploadImage } from '@/utils/imageUpload';
-import { Navbar } from '@/components/layout/Navbar';
-import { Footer } from '@/components/layout/Footer';
-import { Trash2 } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
+import { useState, ChangeEvent, useRef } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useWardrobe } from "@/context/WardrobeContext";
+import { ClothingItem, ClothingType } from "@/types";
+import { uploadImage } from "@/utils/imageUpload";
+import { Navbar } from "@/components/layout/Navbar";
+import { Footer } from "@/components/layout/Footer";
+import { Trash2 } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 
 const WardrobePage = () => {
-  const { clothingItems, categories, subcategories, addClothingItem, deleteClothingItem, isLoading } = useWardrobe();
-  const [activeTab, setActiveTab] = useState<'all' | 'upper' | 'bottom'>('all');
+  const {
+    clothingItems,
+    categories,
+    subcategories,
+    addClothingItem,
+    deleteClothingItem,
+    isLoading,
+  } = useWardrobe();
+
+  // Debug: log categories and subcategories
+  console.log("categories", categories);
+  console.log("subcategories", subcategories);
+
+  // Show loading state if categories or subcategories are not loaded
+  if (isLoading || categories.length === 0 || subcategories.length === 0) {
+    return (
+      <div style={{ padding: 40, textAlign: "center" }}>
+        Loading wardrobe data...
+      </div>
+    );
+  }
+
+  const [activeTab, setActiveTab] = useState<"all" | "upper" | "bottom">("all");
   const [isAddingItem, setIsAddingItem] = useState(false);
   const { toast } = useToast();
-  
+
   // Form state
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [selectedType, setSelectedType] = useState<ClothingType | ''>('');
-  const [selectedCategoryId, setSelectedCategoryId] = useState('');
-  const [selectedSubcategoryId, setSelectedSubcategoryId] = useState('');
-  const [selectedColor, setSelectedColor] = useState('#000000');
-  const [itemName, setItemName] = useState('');
+  const [selectedType, setSelectedType] = useState<ClothingType | "">("");
+  const [selectedCategoryId, setSelectedCategoryId] = useState("");
+  const [selectedSubcategoryId, setSelectedSubcategoryId] = useState("");
+  const [selectedColor, setSelectedColor] = useState("#000000");
+  const [itemName, setItemName] = useState("");
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-  
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+
   const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
       setSelectedFile(file);
-      
+
       // Create preview
       const reader = new FileReader();
       reader.onload = () => {
@@ -41,83 +68,85 @@ const WardrobePage = () => {
       reader.readAsDataURL(file);
     }
   };
-  
+
   const handleTypeChange = (value: string) => {
     setSelectedType(value as ClothingType);
-    setSelectedCategoryId('');
-    setSelectedSubcategoryId('');
+    setSelectedCategoryId("");
+    setSelectedSubcategoryId("");
   };
-  
+
   const handleCategoryChange = (value: string) => {
     setSelectedCategoryId(value);
-    setSelectedSubcategoryId('');
+    setSelectedSubcategoryId("");
   };
-  
-  const filteredCategories = categories.filter(
-    category => selectedType ? category.type === selectedType : true
-  );
-  
-  const filteredSubcategories = subcategories.filter(
-    subcategory => selectedCategoryId ? subcategory.categoryId === selectedCategoryId : true
-  );
-  
+
+  // DEBUG: Show all categories and subcategories for now
+  const filteredCategories = categories;
+  const filteredSubcategories = subcategories;
+  console.log('DEBUG: filteredCategories', filteredCategories);
+  console.log('DEBUG: filteredSubcategories', filteredSubcategories);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (!selectedFile || !selectedType || !selectedCategoryId || !selectedSubcategoryId) {
+
+    if (
+      !selectedFile ||
+      !selectedType ||
+      !selectedCategoryId ||
+      !selectedSubcategoryId
+    ) {
       toast({
-        title: 'Missing information',
-        description: 'Please fill out all required fields',
-        variant: 'destructive',
+        title: "Missing information",
+        description: "Please fill out all required fields",
+        variant: "destructive",
       });
       return;
     }
-    
+
     try {
       const imageUrl = await uploadImage(selectedFile);
-      
+
       await addClothingItem({
-        name: itemName || 'Untitled Item',
+        name: itemName || "Untitled Item",
         imageUrl,
         type: selectedType,
         categoryId: selectedCategoryId,
         subcategoryId: selectedSubcategoryId,
         color: selectedColor,
       });
-      
+
       // Reset form
       setSelectedFile(null);
-      setSelectedType('');
-      setSelectedCategoryId('');
-      setSelectedSubcategoryId('');
-      setSelectedColor('#000000');
-      setItemName('');
+      setSelectedType("");
+      setSelectedCategoryId("");
+      setSelectedSubcategoryId("");
+      setSelectedColor("#000000");
+      setItemName("");
       setPreviewUrl(null);
       setIsAddingItem(false);
-      
     } catch (error) {
-      console.error('Error adding clothing item:', error);
+      console.error("Error adding clothing item:", error);
       toast({
-        title: 'Error adding item',
-        description: 'Could not add the clothing item',
-        variant: 'destructive',
+        title: "Error adding item",
+        description: "Could not add the clothing item",
+        variant: "destructive",
       });
     }
   };
-  
-  const filteredItems = clothingItems.filter(item => {
-    if (activeTab === 'all') return true;
+
+  const filteredItems = clothingItems.filter((item) => {
+    if (activeTab === "all") return true;
     return item.type === activeTab;
   });
-  
+
   const getCategoryName = (categoryId: string) => {
-    const category = categories.find(c => c.id === categoryId);
-    return category ? category.name : 'Unknown';
+    const category = categories.find((c) => c.id === categoryId);
+    return category ? category.name : "Unknown";
   };
-  
+
   const getSubcategoryName = (subcategoryId: string) => {
-    const subcategory = subcategories.find(s => s.id === subcategoryId);
-    return subcategory ? subcategory.name : 'Unknown';
+    const subcategory = subcategories.find((s) => s.id === subcategoryId);
+    return subcategory ? subcategory.name : "Unknown";
   };
 
   return (
@@ -127,20 +156,24 @@ const WardrobePage = () => {
         <div className="flex flex-col md:flex-row md:items-center justify-between mb-8">
           <div>
             <h1 className="text-3xl font-bold text-gray-900">My Wardrobe</h1>
-            <p className="text-gray-600 mt-1">Manage and organize your clothing collection</p>
+            <p className="text-gray-600 mt-1">
+              Manage and organize your clothing collection
+            </p>
           </div>
-          <Button 
-            className="mt-4 md:mt-0" 
+          <Button
+            className="mt-4 md:mt-0"
             onClick={() => setIsAddingItem(!isAddingItem)}
             variant={isAddingItem ? "outline" : "default"}
           >
-            {isAddingItem ? 'Cancel' : 'Add New Item'}
+            {isAddingItem ? "Cancel" : "Add New Item"}
           </Button>
         </div>
-        
+
         {isAddingItem && (
           <div className="bg-white p-6 rounded-lg shadow-md mb-8 animate-fade-in">
-            <h2 className="text-xl font-semibold mb-4">Add New Clothing Item</h2>
+            <h2 className="text-xl font-semibold mb-4">
+              Add New Clothing Item
+            </h2>
             <form onSubmit={handleSubmit} className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-4">
@@ -153,10 +186,13 @@ const WardrobePage = () => {
                       placeholder="e.g., Blue Denim Jeans"
                     />
                   </div>
-                  
+
                   <div>
                     <Label htmlFor="type">Type</Label>
-                    <Select value={selectedType} onValueChange={handleTypeChange}>
+                    <Select
+                      value={selectedType}
+                      onValueChange={handleTypeChange}
+                    >
                       <SelectTrigger id="type" className="w-full">
                         <SelectValue placeholder="Select type" />
                       </SelectTrigger>
@@ -166,11 +202,11 @@ const WardrobePage = () => {
                       </SelectContent>
                     </Select>
                   </div>
-                  
+
                   <div>
                     <Label htmlFor="category">Category</Label>
-                    <Select 
-                      value={selectedCategoryId} 
+                    <Select
+                      value={selectedCategoryId}
                       onValueChange={handleCategoryChange}
                       disabled={!selectedType}
                     >
@@ -186,11 +222,11 @@ const WardrobePage = () => {
                       </SelectContent>
                     </Select>
                   </div>
-                  
+
                   <div>
                     <Label htmlFor="subcategory">Subcategory</Label>
-                    <Select 
-                      value={selectedSubcategoryId} 
+                    <Select
+                      value={selectedSubcategoryId}
                       onValueChange={setSelectedSubcategoryId}
                       disabled={!selectedCategoryId}
                     >
@@ -199,14 +235,17 @@ const WardrobePage = () => {
                       </SelectTrigger>
                       <SelectContent>
                         {filteredSubcategories.map((subcategory) => (
-                          <SelectItem key={subcategory.id} value={subcategory.id}>
+                          <SelectItem
+                            key={subcategory.id}
+                            value={subcategory.id}
+                          >
                             {subcategory.name}
                           </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
                   </div>
-                  
+
                   <div>
                     <Label htmlFor="color">Color</Label>
                     <div className="flex items-center space-x-2">
@@ -221,15 +260,15 @@ const WardrobePage = () => {
                     </div>
                   </div>
                 </div>
-                
+
                 <div className="space-y-4">
                   <Label>Item Image</Label>
                   <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 h-64 flex flex-col items-center justify-center">
                     {previewUrl ? (
                       <div className="relative w-full h-full">
-                        <img 
-                          src={previewUrl} 
-                          alt="Preview" 
+                        <img
+                          src={previewUrl}
+                          alt="Preview"
                           className="w-full h-full object-contain rounded"
                         />
                         <Button
@@ -247,16 +286,16 @@ const WardrobePage = () => {
                       </div>
                     ) : (
                       <div className="text-center">
-                        <svg 
+                        <svg
                           className="mx-auto h-12 w-12 text-gray-400"
                           fill="none"
                           stroke="currentColor"
                           viewBox="0 0 24 24"
                           xmlns="http://www.w3.org/2000/svg"
                         >
-                          <path 
-                            strokeLinecap="round" 
-                            strokeLinejoin="round" 
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
                             strokeWidth={1}
                             d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
                           />
@@ -264,54 +303,64 @@ const WardrobePage = () => {
                         <p className="mt-2 text-sm text-gray-600">
                           Click or drag to upload an image
                         </p>
-                        <Input 
+                        <Input
                           id="file-upload"
                           type="file"
                           accept="image/*"
                           onChange={handleFileChange}
                           className="sr-only"
+                          ref={fileInputRef}
                         />
-                        <Label htmlFor="file-upload" className="mt-4">
-                          <Button type="button" variant="outline" size="sm">
-                            Browse Files
-                          </Button>
-                        </Label>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => fileInputRef.current?.click()}
+                        >
+                          Browse Files
+                        </Button>
                       </div>
                     )}
                   </div>
                 </div>
               </div>
-              
+
               <div className="flex justify-end space-x-2">
-                <Button 
-                  type="button" 
-                  variant="outline" 
+                <Button
+                  type="button"
+                  variant="outline"
                   onClick={() => setIsAddingItem(false)}
                 >
                   Cancel
                 </Button>
                 <Button type="submit" disabled={isLoading}>
-                  {isLoading ? 'Adding Item...' : 'Add Item'}
+                  {isLoading ? "Adding Item..." : "Add Item"}
                 </Button>
               </div>
             </form>
           </div>
         )}
-        
+
         <div>
-          <Tabs defaultValue="all" value={activeTab} onValueChange={(v) => setActiveTab(v as typeof activeTab)}>
+          <Tabs
+            defaultValue="all"
+            value={activeTab}
+            onValueChange={(v) => setActiveTab(v as typeof activeTab)}
+          >
             <TabsList className="mb-6">
               <TabsTrigger value="all">All Items</TabsTrigger>
               <TabsTrigger value="upper">Upper</TabsTrigger>
               <TabsTrigger value="bottom">Bottom</TabsTrigger>
             </TabsList>
-            
+
             <TabsContent value={activeTab} className="mt-0">
               {filteredItems.length === 0 ? (
                 <div className="text-center py-12 bg-gray-50 rounded-lg">
-                  <h3 className="text-lg font-medium text-gray-900 mb-2">No items found</h3>
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">
+                    No items found
+                  </h3>
                   <p className="text-gray-600 mb-4">
-                    {activeTab === 'all' 
+                    {activeTab === "all"
                       ? "Your wardrobe is empty. Add some clothes to get started!"
                       : `You don't have any ${activeTab} clothing items yet.`}
                   </p>
@@ -336,22 +385,26 @@ const WardrobePage = () => {
                         </Button>
                       </div>
                       <div className="h-48 mb-3 bg-gray-100 rounded overflow-hidden">
-                        <img 
-                          src={item.imageUrl} 
-                          alt={item.name || 'Clothing item'} 
+                        <img
+                          src={item.imageUrl}
+                          alt={item.name || "Clothing item"}
                           className="w-full h-full object-cover"
                         />
                       </div>
                       <h3 className="font-medium text-gray-900 truncate">
-                        {item.name || `${getCategoryName(item.categoryId)} (${getSubcategoryName(item.subcategoryId)})`}
+                        {item.name ||
+                          `${getCategoryName(
+                            item.categoryId
+                          )} (${getSubcategoryName(item.subcategoryId)})`}
                       </h3>
                       <div className="flex items-center mt-1">
-                        <div 
-                          className="w-4 h-4 rounded-full mr-2" 
+                        <div
+                          className="w-4 h-4 rounded-full mr-2"
                           style={{ backgroundColor: item.color }}
                         />
                         <span className="text-sm text-gray-600">
-                          {getCategoryName(item.categoryId)} · {getSubcategoryName(item.subcategoryId)}
+                          {getCategoryName(item.categoryId)} ·{" "}
+                          {getSubcategoryName(item.subcategoryId)}
                         </span>
                       </div>
                     </div>

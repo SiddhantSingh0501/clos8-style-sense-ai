@@ -1,42 +1,112 @@
-
 import { ClothingItem } from '@/types';
 
-// Interface definitions
-export interface MatchRequest {
-  item: {
-    color: string;
-    type: string;
-    category: string;
-    subcategory: string;
-  };
+// Interface definitions with proper typing
+export interface MatchResponse {
+  suggestions: SuggestionItem[];
 }
 
-export interface MatchResponse {
-  suggestions: {
-    type: string;
-    category: string;
-    subcategory?: string;
-    color?: string;
-  }[];
+export interface SuggestionItem {
+  type: string;
+  category: string;
+  subcategory?: string;
+  color?: string;
 }
+
+// API Error class for handling Gemini API errors
+export class GeminiApiError extends Error {
+  status?: number;
+  isRateLimit: boolean;
+  retryAfter?: number;
+
+  constructor(message: string, status?: number) {
+    super(message);
+    this.name = 'GeminiApiError';
+    this.status = status;
+    this.isRateLimit = status === 429;
+    
+    // If it's a rate limit error, default retry after 60 seconds
+    if (this.isRateLimit) {
+      this.retryAfter = 60;
+    }
+  }
+}
+
+// In-memory request tracking to prevent excessive API calls
+const requestTracker = {
+  lastRequestTime: 0,
+  requestCount: 0,
+  resetTimer: null as NodeJS.Timeout | null,
+  
+  // Check if we're within rate limits (max 60 requests per minute)
+  canMakeRequest(): boolean {
+    const now = Date.now();
+    const oneMinuteAgo = now - 60000;
+    
+    // Reset counter if a minute has passed since the first request in this window
+    if (this.lastRequestTime < oneMinuteAgo) {
+      this.requestCount = 0;
+    }
+    
+    return this.requestCount < 60;
+  },
+  
+  // Track a new request
+  trackRequest(): void {
+    const now = Date.now();
+    this.lastRequestTime = now;
+    this.requestCount++;
+    
+    // Set a timer to reset the counter after 1 minute
+    if (!this.resetTimer) {
+      this.resetTimer = setTimeout(() => {
+        this.requestCount = 0;
+        this.resetTimer = null;
+      }, 60000);
+    }
+  }
+};
 
 // Function to find matching items based on AI recommendations
 export const findMatchingItems = (
-  suggestions,
-  availableItems
-) => {
-  const matchedItems = [];
+  suggestions: (SuggestionItem | null)[],
+  availableItems: ClothingItem[]
+): ClothingItem[] => {
+  if (!suggestions || !availableItems || !Array.isArray(suggestions) || !Array.isArray(availableItems)) {
+    return [];
+  }
+
+  const matchedItems: ClothingItem[] = [];
   
   suggestions.forEach(suggestion => {
-    const matchingItems = availableItems.filter(item => 
-      item.type === suggestion.type &&
-      (suggestion.category ? item.categoryId.toLowerCase().includes(suggestion.category.toLowerCase()) || 
-                            getCategoryNameFromId(item.categoryId).toLowerCase().includes(suggestion.category.toLowerCase()) : true) &&
-      (suggestion.color ? item.color.toLowerCase().includes(suggestion.color.toLowerCase()) : true)
-    );
+    if (!suggestion) return;
+    
+    const matchingItems = availableItems.filter(item => {
+      // Basic type match
+      const typeMatch = item.type === suggestion.type;
+      if (!typeMatch) return false;
+      
+      // Category match - more flexible matching
+      let categoryMatch = false;
+      if (suggestion.category) {
+        const categoryName = getCategoryNameFromId(item.categoryId);
+        categoryMatch = 
+          item.categoryId.toLowerCase().includes(suggestion.category.toLowerCase()) || 
+          categoryName.toLowerCase().includes(suggestion.category.toLowerCase());
+      } else {
+        categoryMatch = true; // No category constraint
+      }
+      
+      // Color match if specified
+      let colorMatch = true;
+      if (suggestion.color) {
+        colorMatch = item.color.toLowerCase().includes(suggestion.color.toLowerCase());
+      }
+      
+      return typeMatch && categoryMatch && colorMatch;
+    });
     
     if (matchingItems.length > 0) {
-      // Get a random item from the matches
+      // Get a random item from the matches for variety
       const randomIndex = Math.floor(Math.random() * matchingItems.length);
       matchedItems.push(matchingItems[randomIndex]);
     }
@@ -46,9 +116,9 @@ export const findMatchingItems = (
 };
 
 // Helper function to extract category name from ID
-const getCategoryNameFromId = (categoryId) => {
+const getCategoryNameFromId = (categoryId: string): string => {
   // This would be replaced with a lookup from your actual category data
-  const categoryMap = {
+  const categoryMap: Record<string, string> = {
     'cat-1': 'T-Shirt',
     'cat-2': 'Shirt',
     'cat-3': 'Sweater',
@@ -61,14 +131,23 @@ const getCategoryNameFromId = (categoryId) => {
 };
 
 // Function to get outfit suggestions from Gemini API
-export const getOutfitSuggestions = async (item, categoryMapping, subcategoryMapping) => {
+export const getOutfitSuggestions = async (
+  item: ClothingItem,
+  categoryMapping: Record<string, string>,
+  subcategoryMapping: Record<string, string>
+): Promise<MatchResponse> => {
   try {
-    // Use the Gemini API key from environment variables
-    const API_KEY = process.env.GEMINI_API_KEY || localStorage.getItem('GEMINI_API_KEY');
+    // Check rate limits before making a request
+    if (!requestTracker.canMakeRequest()) {
+      throw new GeminiApiError('Rate limit exceeded. Try again later.', 429);
+    }
     
-    if (!API_KEY) {
-      console.error('Missing Gemini API key');
-      throw new Error('Gemini API key not found');
+    // Use the Gemini API key from environment variables or localStorage
+    const apiKey = localStorage.getItem('gemini-api-key');
+    
+    if (!apiKey) {
+      console.warn('Missing Gemini API key, using mock implementation');
+      return mockGeminiResponse(item, getColorName(item.color), categoryMapping[item.categoryId] || 'unknown');
     }
     
     // Get category and subcategory names for context
@@ -94,63 +173,100 @@ export const getOutfitSuggestions = async (item, categoryMapping, subcategoryMap
       }
     `;
 
-    // For now, return the mock implementation until Gemini API is fully integrated
-    return mockGeminiResponse(item, colorName, category);
-    
-    /* 
-    // Uncomment and use this code when your Gemini API integration is ready
-    const response = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${API_KEY}`
-      },
-      body: JSON.stringify({
-        contents: [
-          {
-            parts: [
-              {
-                text: prompt
-              }
-            ]
+    // Track this request
+    requestTracker.trackRequest();
+
+    try {
+      // Make API request to Gemini
+      const response = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey}`
+        },
+        body: JSON.stringify({
+          contents: [
+            {
+              parts: [
+                {
+                  text: prompt
+                }
+              ]
+            }
+          ],
+          generationConfig: {
+            temperature: 0.2,
+            topK: 32,
+            topP: 0.95,
+            maxOutputTokens: 1024,
           }
-        ],
-        generationConfig: {
-          temperature: 0.2,
-          topK: 32,
-          topP: 0.95,
-          maxOutputTokens: 1024,
+        })
+      });
+      
+      if (!response.ok) {
+        // Handle specific error status codes
+        if (response.status === 429) {
+          // Rate limit hit - get retry-after header if available
+          const retryAfter = response.headers.get('retry-after');
+          const error = new GeminiApiError('Gemini API rate limit exceeded', 429);
+          if (retryAfter) {
+            error.retryAfter = parseInt(retryAfter, 10);
+          }
+          throw error;
         }
-      })
-    });
-    
-    if (!response.ok) {
-      throw new Error(`Gemini API request failed: ${response.status}`);
+        
+        throw new GeminiApiError(`Gemini API request failed: ${response.status}`, response.status);
+      }
+      
+      const data = await response.json();
+      
+      // Validate response structure
+      if (!data.candidates || !data.candidates[0]?.content?.parts?.[0]?.text) {
+        throw new GeminiApiError('Invalid response format from Gemini API');
+      }
+      
+      // Parse the response text to extract JSON
+      const text = data.candidates[0].content.parts[0].text;
+      const jsonMatch = text.match(/\{[\s\S]*\}/);
+      
+      if (jsonMatch) {
+        try {
+          const parsedResponse = JSON.parse(jsonMatch[0]);
+          
+          // Validate the parsed response has the expected structure
+          if (!parsedResponse.suggestions || !Array.isArray(parsedResponse.suggestions)) {
+            throw new Error('Response missing suggestions array');
+          }
+          
+          return parsedResponse;
+        } catch (parseError) {
+          console.error('Error parsing Gemini API response:', parseError);
+          throw new GeminiApiError('Could not parse JSON response from Gemini');
+        }
+      } else {
+        throw new GeminiApiError('Could not find JSON in Gemini response');
+      }
+    } catch (apiError) {
+      // If the API call fails, fall back to mock implementation
+      console.error('Error calling Gemini API:', apiError);
+      throw apiError;
     }
-    
-    const data = await response.json();
-    
-    // Parse the response text to extract JSON
-    const text = data.candidates[0].content.parts[0].text;
-    const jsonMatch = text.match(/\{[\s\S]*\}/);
-    
-    if (jsonMatch) {
-      return JSON.parse(jsonMatch[0]);
-    } else {
-      throw new Error('Could not parse JSON response from Gemini');
-    }
-    */
   } catch (error) {
     console.error('Error using Gemini API:', error);
+    
     // Fall back to mock suggestions
-    return mockGeminiResponse(item, getColorName(item.color), categoryMapping[item.categoryId] || 'unknown');
+    return mockGeminiResponse(
+      item, 
+      getColorName(item.color), 
+      categoryMapping[item.categoryId] || 'unknown'
+    );
   }
 };
 
 // Helper function to convert hex colors to names
-const getColorName = (hexColor) => {
+const getColorName = (hexColor: string): string => {
   // Simple hex color to name mapping
-  const colorMap = {
+  const colorMap: Record<string, string> = {
     '#000000': 'black',
     '#FFFFFF': 'white',
     '#0000FF': 'blue',
@@ -165,21 +281,30 @@ const getColorName = (hexColor) => {
     '#F0E68C': 'khaki',
   };
   
+  // For non-hex colors, assume it's already a name
+  if (!hexColor.startsWith('#')) {
+    return hexColor.toLowerCase();
+  }
+  
   // Normalize hex color (uppercase and full 6 digits)
   const normalizedHex = hexColor.toUpperCase();
   
   // Return the color name if found, otherwise return the hex
-  return colorMap[normalizedHex] || 'unknown';
+  return colorMap[normalizedHex] || normalizedHex;
 };
 
 // Mock function to simulate getting matching suggestions
-const mockGeminiResponse = (item, colorName, category) => {
+const mockGeminiResponse = (
+  item: ClothingItem, 
+  colorName: string, 
+  category: string
+): Promise<MatchResponse> => {
   return new Promise((resolve) => {
     setTimeout(() => {
       // Generate a mock suggestion based on the input item
       if (item.type === 'upper') {
         // If it's an upper item, suggest a bottom
-        const suggestions = [];
+        const suggestions: SuggestionItem[] = [];
         
         // Color-based matching
         if (colorName === 'black' || colorName === 'white') {
@@ -210,7 +335,7 @@ const mockGeminiResponse = (item, colorName, category) => {
         });
       } else {
         // If it's a bottom item, suggest an upper
-        const suggestions = [];
+        const suggestions: SuggestionItem[] = [];
         
         // Category-based matching
         if (category.toLowerCase().includes('jeans')) {
@@ -242,11 +367,11 @@ const mockGeminiResponse = (item, colorName, category) => {
 };
 
 // Add a function to store Gemini API Key in localStorage
-export const setGeminiApiKey = (key) => {
-  localStorage.setItem('GEMINI_API_KEY', key);
+export const setGeminiApiKey = (key: string): void => {
+  localStorage.setItem('gemini-api-key', key);
 };
 
-export const getGeminiApiKey = () => {
-  return localStorage.getItem('GEMINI_API_KEY');
+export const getGeminiApiKey = (): string | null => {
+  return localStorage.getItem('gemini-api-key');
 };
 

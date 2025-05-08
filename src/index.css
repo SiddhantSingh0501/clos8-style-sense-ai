@@ -1,9 +1,8 @@
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap");
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
 
 @layer base {
   :root {
@@ -40,7 +39,7 @@
 
   * {
     @apply border-border;
-    font-family: 'Inter', sans-serif;
+    font-family: "Inter", sans-serif;
   }
 
   body {
@@ -52,7 +51,7 @@
   .outfit-card {
     @apply bg-white rounded-lg shadow-md p-4 transition-all hover:shadow-lg;
   }
-  
+
   .clothing-card {
     @apply bg-white rounded-lg shadow-sm p-3 transition-all hover:shadow-md cursor-pointer;
   }
