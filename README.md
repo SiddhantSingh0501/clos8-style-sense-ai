@@ -9,8 +9,6 @@ An AI-powered wardrobe management and outfit recommendation application.
 - Weekly outfit planning
 - User authentication and data persistence with Supabase
 
-## Project info
-
 ## Supabase Integration
 
 This project uses Supabase for:
@@ -54,10 +52,14 @@ This project is built with:
 - Google Gemini API
 - Supabase (Auth, Database, Storage)
 
-## Deployment
+## Project Summary
 
-To deploy, use your preferred hosting provider.
+Clos8 Style Sense AI is a modern web application that helps users manage their wardrobe and receive AI-powered outfit recommendations. The project includes:
 
-## Custom Domain
+- A digital wardrobe where users can add, categorize, and manage clothing items
+- Integration with Google Gemini API for generating smart outfit suggestions
+- Weekly outfit planning and scheduling
+- User authentication and persistent data storage using Supabase
+- A clean, responsive UI built with React, shadcn-ui, and Tailwind CSS
 
-To connect a domain, follow your hosting provider's instructions.
+All code is TypeScript-based and leverages best practices for state management, error handling, and user experience.
