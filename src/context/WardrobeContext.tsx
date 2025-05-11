@@ -33,7 +33,7 @@ interface WardrobeContextType {
   filter: WardrobeFilter;
   sort: SortOption;
   addClothingItem: (
-    item: Omit<ClothingItem, "id" | "createdAt">
+    item: Omit<ClothingItem, "id" | "user_id">
   ) => Promise<ClothingItem | null>;
   updateClothingItem: (item: ClothingItem) => Promise<ClothingItem | null>;
   deleteClothingItem: (id: string) => Promise<boolean>;
@@ -55,9 +55,8 @@ const defaultFilter: WardrobeFilter = {
   favorite: null,
   season: null,
 };
-
 const defaultSort: SortOption = {
-  field: "createdAt",
+  field: "created_at",
   direction: "desc",
 };
 
@@ -276,57 +275,37 @@ export function WardrobeProvider({ children }: { children: ReactNode }) {
   }, [user, filter, sort, pagination, loadClothingItems]);
 
   // Add a new clothing item
-  const addClothingItem = async (
-    item: Omit<ClothingItem, "id" | "createdAt">
-  ): Promise<ClothingItem | null> => {
-    if (!user) {
-      toast({
-        title: "Authentication required",
-        description: "Please log in to add clothing items",
-        variant: "destructive",
-      });
-      return null;
-    }
+  const addClothingItem = async (item: Omit<ClothingItem, 'id' | 'user_id'>) => {
+    if (!user) throw new Error('User not authenticated');
 
     try {
-      setIsSubmitting(true);
-
-      const newItem = {
-        ...item,
-        user_id: user.id,
-        createdAt: new Date().toISOString(),
-      };
-
+      console.log('Inserting item:', item); // Debug log
       const { data, error } = await supabase
-        .from("clothing_items")
-        .insert([newItem])
+        .from('clothing_items')
+        .insert({
+          name: item.name,
+          image_url: item.image_url,
+          type: item.type,
+          category_id: item.category_id,
+          subcategory_id: item.subcategory_id,
+          color: item.color,
+          user_id: user.id
+        })
         .select()
         .single();
 
       if (error) {
+        console.error('Supabase error:', error);
         throw error;
       }
 
-      if (!data) {
-        throw new Error("Failed to create clothing item");
-      }
+      if (!data) throw new Error('No data returned from insert');
 
-      toast({
-        title: "Item added",
-        description: "Your clothing item has been added to your wardrobe",
-      });
-
+      setClothingItems(prev => [...prev, data]);
       return data;
     } catch (error) {
-      console.error("Error adding clothing item:", error);
-      toast({
-        title: "Error adding item",
-        description: "Could not add clothing item to your wardrobe",
-        variant: "destructive",
-      });
-      return null;
-    } finally {
-      setIsSubmitting(false);
+      console.error('Error in addClothingItem:', error);
+      throw error;
     }
   };
 

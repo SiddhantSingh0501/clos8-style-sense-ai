@@ -14,14 +14,14 @@ export type ClothingSubcategory = {
 
 export interface ClothingItem {
   id: string;
-  name?: string;
-  imageUrl: string;
-  type: ClothingType;
-  categoryId: string;
-  subcategoryId: string;
+  name: string;
+  image_url: string;
+  type: 'upper' | 'bottom';
+  category_id: string;
+  subcategory_id: string;
   color: string;
-  createdAt: string;
-  user_id?: string; // Added for Supabase
+  created_at: string;
+  user_id: string;
   favorite?: boolean; // Flag for favorite items
   seasons?: string[]; // Seasons when item can be worn
   lastWorn?: string; // Date when item was last worn

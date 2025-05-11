@@ -1,13 +1,13 @@
--- Create clothing_items table
+    -- Create clothing_items table
 CREATE TABLE IF NOT EXISTS public.clothing_items (
   id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
   name TEXT,
-  imageUrl TEXT NOT NULL,
+  image_url TEXT NOT NULL,
   type TEXT NOT NULL CHECK (type IN ('upper', 'bottom')),
-  categoryId TEXT NOT NULL,
-  subcategoryId TEXT NOT NULL,
+  category_id TEXT NOT NULL,
+  subcategory_id TEXT NOT NULL,
   color TEXT NOT NULL,
-  createdAt TIMESTAMP WITH TIME ZONE DEFAULT now(),
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT now(),
   user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE
 );
 

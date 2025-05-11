@@ -12,8 +12,7 @@ const ALLOWED_FORMATS = ["image/jpeg", "image/png", "image/webp", "image/gif"];
 const COMPRESSION_QUALITY = 0.8;
 
 // Bucket name for Supabase storage
-// Note: This bucket must be created by an admin in the Supabase dashboard
-const BUCKET_NAME = "clothing";
+const BUCKET_NAME = "images";
 
 /**
  * Validates an image file before upload
@@ -141,112 +140,40 @@ const readFileAsDataURL = (file: File): Promise<string> => {
 
 /**
  * Uploads an image to Supabase Storage with progress tracking
- * If Supabase fails, falls back to data URL
  * @param file File to upload
  * @param userId User ID for organization
  * @param progressCallback Optional callback for upload progress updates
  * @returns Promise resolving to the URL of the uploaded image
  */
-export const uploadImage = async (
-  file: File,
-  userId?: string,
-  progressCallback?: (progress: UploadProgress) => void
-): Promise<string> => {
-  try {
-    // Validate the image
-    validateImage(file);
-    
-    // Update progress if callback provided
-    if (progressCallback) {
-      progressCallback({
-        progress: 5,
-        isUploading: true,
-        error: null
-      });
-    }
-    
-    // Compress the image
-    const compressedFile = await compressImage(file);
-    
-    if (progressCallback) {
-      progressCallback({
-        progress: 20,
-        isUploading: true,
-        error: null
-      });
-    }
+export const uploadImage = async (file: File): Promise<string> => {
+  const fileExt = file.name.split('.').pop();
+  const fileName = `${uuidv4()}.${fileExt}`;
 
-    // Generate a unique filename
-    const fileExt = file.name.split('.').pop();
-    const fileName = `${uuidv4()}.${fileExt}`;
-    
-    try {
-      // Try to upload to Supabase first
-      const { data, error } = await supabase.storage
-        .from(BUCKET_NAME)
-        .upload(`public/${fileName}`, compressedFile, {
-          cacheControl: '3600',
-          upsert: true,
-        });
-    
-      // If successful, return the public URL
-      if (data && !error) {
-        const { data: urlData } = supabase.storage
-          .from(BUCKET_NAME)
-          .getPublicUrl(`public/${fileName}`);
-        
-        if (progressCallback) {
-          progressCallback({
-            progress: 100,
-            isUploading: false,
-            error: null
-          });
-        }
-        
-        return urlData.publicUrl;
-      } else {
-        console.error("Storage upload error:", error);
-        // If we get here, Supabase upload failed - fall through to data URL fallback
-      }
-    } catch (uploadError) {
-      console.error("Storage upload exception:", uploadError);
-      // Continue to fallback
-    }
-    
-    // Fallback: Use data URL instead
-    console.log("Using data URL fallback for image storage");
-    const dataUrl = await readFileAsDataURL(file);
-    
-    if (progressCallback) {
-      progressCallback({
-        progress: 100,
-        isUploading: false,
-        error: null
-      });
-    }
-    
-    return dataUrl;
-    
-  } catch (error) {
-    console.error("Error uploading image:", error);
-    
-    try {
-      // Last resort fallback - try to get data URL even if other operations failed
-      return await readFileAsDataURL(file);
-    } catch (fallbackError) {
-      console.error("Fallback also failed:", fallbackError);
-      // Final fallback - use placeholder
-      return '/placeholder.svg';
-    } finally {
-      if (progressCallback) {
-        progressCallback({
-          progress: 100,
-          isUploading: false,
-          error: error as Error
-        });
-      }
-    }
+  console.log("HELLLOOOO 1");
+  const { data, error } = await supabase.storage
+    .from(BUCKET_NAME)
+    .upload(fileName, file, {
+      cacheControl: '3600',
+      upsert: true,
+    });
+
+  console.log("DATA", data);
+  console.log("HELLLOOOO 2");
+
+  if (error){
+    console.log("HELLLOOOO 3");
+    throw error;
   }
+
+  console.log("HELLLOOOO 4");
+  const { data: urlData } = supabase.storage
+  .from(BUCKET_NAME)
+  .getPublicUrl(fileName);
+  console.log("HELLLOOOO 5");
+
+  console.log("URLData :", urlData)
+
+  return urlData.publicUrl;
 };
 
 /**
@@ -281,7 +208,7 @@ export const deleteImage = async (url: string): Promise<boolean> => {
       .remove([filePath]);
 
     if (error) {
-      console.warn("Error deleting from storage:", error);
+      console.error('Error deleting from storage:', error);
       return false;
     }
 

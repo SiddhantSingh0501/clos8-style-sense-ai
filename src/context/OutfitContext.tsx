@@ -502,7 +502,7 @@ export function OutfitProvider({ children }: { children: ReactNode }) {
       toast({
         title: "Weekly outfits generated!",
         description: "Your AI-powered weekly outfit plan is ready",
-        variant: "success",
+        variant: "default",
       });
     } catch (error) {
       console.error("Error generating outfits:", error);

@@ -116,7 +116,28 @@ export function getSupabaseClient(): SupabaseClient {
             eventsPerSecond: 10,
           },
         },
+        global: {
+          headers: {
+            'x-application-name': 'clos8-style-sense-ai',
+          },
+        },
       });
+
+      // Verify storage bucket exists
+      if (import.meta.env.PROD) {
+        supabaseInstance.storage
+          .getBucket('images')
+          .then(({ data, error }) => {
+            if (error) {
+              console.error('Storage bucket error:', error);
+            } else {
+              console.log('Storage bucket verified:', data);
+            }
+          })
+          .catch(error => {
+            console.error('Failed to verify storage bucket:', error);
+          });
+      }
 
       if (import.meta.env.DEV) {
         console.log("✅ Supabase client initialized successfully");
@@ -224,7 +245,7 @@ export const supabase = getSupabaseClient();
  * @param userId Optional user ID to filter by
  * @returns A function to unsubscribe
  */
-export function subscribeToTable<T>(
+export function subscribeToTable<T extends { user_id?: string }>(
   tableName: string,
   onInsert?: (item: T) => void,
   onUpdate?: (item: T) => void,
@@ -244,13 +265,13 @@ export function subscribeToTable<T>(
 
   // Set up filter
   let filter = supabase.channel(channelName).on(
-    "postgres_changes",
+    "postgres_changes" as any, // Type assertion needed due to Supabase type definitions
     {
       event: "*",
       schema: "public",
       table: tableName,
     },
-    (payload) => {
+    (payload: { eventType: string; new: T | null; old: T | null }) => {
       const { eventType, new: newRecord, old: oldRecord } = payload;
 
       // Filter by user ID if provided
@@ -258,12 +279,12 @@ export function subscribeToTable<T>(
         return;
       }
 
-      if (eventType === "INSERT" && onInsert) {
-        onInsert(newRecord as T);
-      } else if (eventType === "UPDATE" && onUpdate) {
-        onUpdate(newRecord as T);
+      if (eventType === "INSERT" && onInsert && newRecord) {
+        onInsert(newRecord);
+      } else if (eventType === "UPDATE" && onUpdate && newRecord) {
+        onUpdate(newRecord);
       } else if (eventType === "DELETE" && onDelete && oldRecord) {
-        onDelete(oldRecord as T);
+        onDelete(oldRecord);
       }
     }
   );

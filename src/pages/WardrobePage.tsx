@@ -26,11 +26,12 @@ const WardrobePage = () => {
     addClothingItem,
     deleteClothingItem,
     isLoading,
+    isSubmitting
   } = useWardrobe();
 
   // Debug: log categories and subcategories
-  console.log("categories", categories);
-  console.log("subcategories", subcategories);
+  // console.log("categories", categories);
+  // console.log("subcategories", subcategories);
 
   // Show loading state if categories or subcategories are not loaded
   if (isLoading || categories.length === 0 || subcategories.length === 0) {
@@ -83,52 +84,47 @@ const WardrobePage = () => {
   // DEBUG: Show all categories and subcategories for now
   const filteredCategories = categories;
   const filteredSubcategories = subcategories;
-  console.log('DEBUG: filteredCategories', filteredCategories);
-  console.log('DEBUG: filteredSubcategories', filteredSubcategories);
+  // console.log('DEBUG: filteredCategories', filteredCategories);
+  // console.log('DEBUG: filteredSubcategories', filteredSubcategories);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
-    if (
-      !selectedFile ||
-      !selectedType ||
-      !selectedCategoryId ||
-      !selectedSubcategoryId
-    ) {
-      toast({
-        title: "Missing information",
-        description: "Please fill out all required fields",
-        variant: "destructive",
-      });
-      return;
-    }
+    if (!selectedFile) return;
 
     try {
-      const imageUrl = await uploadImage(selectedFile);
-
-      await addClothingItem({
+      const image_url = await uploadImage(selectedFile);
+      
+      const newItem: Omit<ClothingItem, 'id' | 'user_id'> = {
         name: itemName || "Untitled Item",
-        imageUrl,
-        type: selectedType,
-        categoryId: selectedCategoryId,
-        subcategoryId: selectedSubcategoryId,
+        image_url: image_url,
+        type: selectedType as 'upper' | 'bottom',
+        category_id: selectedCategoryId,
+        subcategory_id: selectedSubcategoryId,
         color: selectedColor,
-      });
+        created_at: new Date().toISOString()
+      };
 
+      console.log('Submitting item:', newItem); // Debug log
+      await addClothingItem(newItem);
+      
+      toast({
+        title: "Success",
+        description: "Clothing item added successfully",
+      });
+      
       // Reset form
-      setSelectedFile(null);
+      setItemName("");
       setSelectedType("");
       setSelectedCategoryId("");
       setSelectedSubcategoryId("");
       setSelectedColor("#000000");
-      setItemName("");
+      setSelectedFile(null);
       setPreviewUrl(null);
-      setIsAddingItem(false);
     } catch (error) {
-      console.error("Error adding clothing item:", error);
+      console.error('Error submitting form:', error);
       toast({
-        title: "Error adding item",
-        description: "Could not add the clothing item",
+        title: "Error",
+        description: "Failed to add clothing item",
         variant: "destructive",
       });
     }
@@ -386,7 +382,7 @@ const WardrobePage = () => {
                       </div>
                       <div className="h-48 mb-3 bg-gray-100 rounded overflow-hidden">
                         <img
-                          src={item.imageUrl}
+                          src={item.image_url}
                           alt={item.name || "Clothing item"}
                           className="w-full h-full object-cover"
                         />
@@ -394,8 +390,8 @@ const WardrobePage = () => {
                       <h3 className="font-medium text-gray-900 truncate">
                         {item.name ||
                           `${getCategoryName(
-                            item.categoryId
-                          )} (${getSubcategoryName(item.subcategoryId)})`}
+                            item.category_id
+                          )} (${getSubcategoryName(item.subcategory_id)})`}
                       </h3>
                       <div className="flex items-center mt-1">
                         <div
@@ -403,8 +399,8 @@ const WardrobePage = () => {
                           style={{ backgroundColor: item.color }}
                         />
                         <span className="text-sm text-gray-600">
-                          {getCategoryName(item.categoryId)} ·{" "}
-                          {getSubcategoryName(item.subcategoryId)}
+                          {getCategoryName(item.category_id)} ·{" "}
+                          {getSubcategoryName(item.subcategory_id)}
                         </span>
                       </div>
                     </div>
