@@ -1,6 +1,14 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { ClothingItem } from '@/types';
 
+declare global {
+  interface Window {
+    __clos8_geminiRateLimitToast?: number;
+    __clos8_gemini404Toast?: boolean;
+    toast?: (args: any) => void;
+  }
+}
+
 // Interface definitions with proper typing
 export interface MatchResponse {
   suggestions: SuggestionItem[];

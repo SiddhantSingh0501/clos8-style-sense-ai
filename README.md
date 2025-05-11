@@ -11,8 +11,6 @@ An AI-powered wardrobe management and outfit recommendation application.
 
 ## Project info
 
-**URL**: https://lovable.dev/projects/9021f8f5-fe51-4bea-a917-f90e12eb0b9b
-
 ## Supabase Integration
 
 This project uses Supabase for:
@@ -58,10 +56,8 @@ This project is built with:
 
 ## Deployment
 
-Simply open [Lovable](https://lovable.dev/projects/9021f8f5-fe51-4bea-a917-f90e12eb0b9b) and click on Share -> Publish.
+To deploy, use your preferred hosting provider.
 
 ## Custom Domain
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/tips-tricks/custom-domain#step-by-step-guide)
+To connect a domain, follow your hosting provider's instructions.
