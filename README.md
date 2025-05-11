@@ -17,8 +17,6 @@ This project uses Supabase for:
 - Database storage (clothing items and outfits)
 - Image storage (clothing images)
 
-To set up Supabase for this project, see the [Supabase Setup Guide](./SUPABASE-SETUP.md).
-
 ## Local Development
 
 If you want to work locally using your own IDE, you can clone this repo and push changes:

@@ -1,4 +1,3 @@
-
 import { useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -164,7 +163,7 @@ const DashboardPage = () => {
                       <p className="text-sm font-medium text-gray-500 mb-2">Top</p>
                       <div className="aspect-square bg-gray-100 rounded-lg overflow-hidden">
                         <img
-                          src={todayOutfit.upper.imageUrl}
+                          src={todayOutfit.upper.image_url}
                           alt={todayOutfit.upper.name || "Today's top"}
                           className="w-full h-full object-cover"
                         />
@@ -174,7 +173,7 @@ const DashboardPage = () => {
                       <p className="text-sm font-medium text-gray-500 mb-2">Bottom</p>
                       <div className="aspect-square bg-gray-100 rounded-lg overflow-hidden">
                         <img
-                          src={todayOutfit.bottom.imageUrl}
+                          src={todayOutfit.bottom.image_url}
                           alt={todayOutfit.bottom.name || "Today's bottom"}
                           className="w-full h-full object-cover"
                         />

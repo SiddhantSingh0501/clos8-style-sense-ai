@@ -377,14 +377,14 @@ export function WardrobeProvider({ children }: { children: ReactNode }) {
       // First, get the item to delete its image
       const { data: itemData } = await supabase
         .from("clothing_items")
-        .select("imageUrl")
+        .select("image_url")
         .eq("id", id)
         .eq("user_id", user.id)
         .single();
 
-      if (itemData?.imageUrl) {
+      if (itemData?.image_url) {
         // Delete the image from storage first
-        await deleteImage(itemData.imageUrl);
+        await deleteImage(itemData.image_url);
       }
 
       // Then delete the item itself
