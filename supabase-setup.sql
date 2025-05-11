@@ -30,7 +30,7 @@ CREATE TABLE IF NOT EXISTS public.outfits (
   upper JSONB NOT NULL, -- JSON object representing upper ClothingItem
   bottom JSONB NOT NULL, -- JSON object representing bottom ClothingItem
   day TEXT NOT NULL CHECK (day IN ('monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday')),
-  createdAt TIMESTAMP WITH TIME ZONE DEFAULT now(),
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT now(),
   user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE
 );
 

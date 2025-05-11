@@ -23,6 +23,12 @@ import {
 import { supabase, subscribeToTable } from "@/lib/supabase";
 import { useAuth } from "./AuthContext";
 
+declare global {
+  interface Window {
+    __clos8_lastGenToast?: number;
+  }
+}
+
 interface OutfitContextType {
   weeklyOutfits: Outfit[];
   isLoading: boolean;
@@ -316,113 +322,105 @@ export function OutfitProvider({ children }: { children: ReactNode }) {
     categoryMapping: Record<string, string>,
     subcategoryMapping: Record<string, string>
   ): Promise<Outfit> => {
-    // Select a random upper or bottom item to start with
-    const startWithUpper = Math.random() > 0.5;
-    const items = startWithUpper ? upperItems : bottomItems;
-    
-    // Ensure we have items to select from
-    if (items.length === 0) {
-      throw new Error(`No ${startWithUpper ? 'upper' : 'bottom'} items available`);
+    // Validate inputs
+    if (!upperItems.length || !bottomItems.length) {
+      // Always fallback to random pairing if not enough items
+      const randomUpper = upperItems[0] || null;
+      const randomBottom = bottomItems[0] || null;
+      if (randomUpper && randomBottom) {
+        return {
+          upper: randomUpper,
+          bottom: randomBottom,
+          day: day,
+          // createdAt: new Date().toISOString(),
+          user_id: user?.id
+        };
+      }
+      throw new Error(`Not enough items available for ${day}`);
     }
-    
-    const randomIndex = Math.floor(Math.random() * items.length);
-    const selectedItem = items[randomIndex];
 
     try {
-      // Get suggestions from cache or API
-      const suggestionStrings = await getSuggestions(
+      // Select a random upper or bottom item to start with
+      const startWithUpper = Math.random() > 0.5;
+      const items = startWithUpper ? upperItems : bottomItems;
+      const randomIndex = Math.floor(Math.random() * items.length);
+      const selectedItem = items[randomIndex];
+
+      // Get suggestions from Gemini
+      const suggestionStrings = await getOutfitSuggestions(
         selectedItem, 
         categoryMapping, 
         subcategoryMapping
       );
       
-      // Parse suggestions back to objects
-      const suggestions = suggestionStrings.map(str => {
-        try {
-          return JSON.parse(str);
-        } catch (e) {
-          console.error("Error parsing suggestion:", e);
-          return null;
-        }
-      }).filter(Boolean);
-      
-      // Find matching items from the wardrobe based on suggestions
+      // Find matching items from the wardrobe
       const availableItems = startWithUpper ? bottomItems : upperItems;
-      const matchedItems = findMatchingItems(suggestions, availableItems);
+      const matchedItems = findMatchingItems(suggestionStrings.suggestions, availableItems);
 
       // If we found a match, create the outfit
       if (matchedItems.length > 0) {
-        const matchedItem = matchedItems[0]; // Take the first match
-
+        const matchedItem = matchedItems[0];
         return {
           upper: startWithUpper ? selectedItem : matchedItem,
           bottom: startWithUpper ? matchedItem : selectedItem,
           day: day,
-          createdAt: new Date().toISOString(),
-          user_id: user?.id
-        };
-      } else {
-        // Fallback if no match is found - select a random item
-        if (availableItems.length === 0) {
-          throw new Error(`No ${startWithUpper ? 'bottom' : 'upper'} items available`);
-        }
-        
-        const randomComplement =
-          availableItems[Math.floor(Math.random() * availableItems.length)];
-
-        return {
-          upper: startWithUpper ? selectedItem : randomComplement,
-          bottom: startWithUpper ? randomComplement : selectedItem,
-          day: day,
-          createdAt: new Date().toISOString(),
+          // createdat: new Date().toISOString(),
           user_id: user?.id
         };
       }
+
+      // Fallback if no match is found - select a random item
+      const randomComplement = availableItems[Math.floor(Math.random() * availableItems.length)];
+      return {
+        upper: startWithUpper ? selectedItem : randomComplement,
+        bottom: startWithUpper ? randomComplement : selectedItem,
+        day: day,
+        // createdAt: new Date().toISOString(),
+        user_id: user?.id
+      };
     } catch (error) {
       console.error(`Error generating outfit for ${day}:`, error);
-
       // Fallback on error - create a random pairing
-      if (upperItems.length === 0 || bottomItems.length === 0) {
-        throw new Error("Not enough items to create an outfit");
-      }
-      
-      const randomUpper =
-        upperItems[Math.floor(Math.random() * upperItems.length)];
-      const randomBottom =
-        bottomItems[Math.floor(Math.random() * bottomItems.length)];
-
+      const randomUpper = upperItems[Math.floor(Math.random() * upperItems.length)];
+      const randomBottom = bottomItems[Math.floor(Math.random() * bottomItems.length)];
       return {
         upper: randomUpper,
         bottom: randomBottom,
         day: day,
-        createdAt: new Date().toISOString(),
+        // createdAt: new Date().toISOString(),
         user_id: user?.id
       };
     }
-  }, [getSuggestions, user]);
+  }, [user]);
 
   // Generate weekly outfits
   const generateWeeklyOutfits = async () => {
-    // Check authentication
-    if (!user) {
-      toast({
-        title: "Authentication required",
-        description: "Please log in to generate outfits",
-        variant: "destructive",
-      });
-      return;
-    }
-    
-    // Prevent multiple simultaneous generations
-    if (generationInProgress.current) {
-      toast({
-        title: "Generation in progress",
-        description: "Please wait for the current generation to complete",
-      });
-      return;
-    }
-
     try {
+      // Check authentication
+      if (!user) {
+        toast({
+          title: "Authentication required",
+          description: "Please log in to generate outfits",
+          variant: "destructive",
+          duration: 3000,
+        });
+        return;
+      }
+      
+      // Prevent multiple simultaneous generations
+      if (generationInProgress.current) {
+        // Only show the toast if not already shown in the last 3 seconds
+        if (!window.__clos8_lastGenToast || Date.now() - window.__clos8_lastGenToast > 3000) {
+          toast({
+            title: "Generation in progress",
+            description: "Please wait for the current generation to complete",
+            duration: 3000,
+          });
+          window.__clos8_lastGenToast = Date.now();
+        }
+        return;
+      }
+
       generationInProgress.current = true;
       setIsGenerating(true);
 
@@ -432,6 +430,7 @@ export function OutfitProvider({ children }: { children: ReactNode }) {
           title: "Not enough clothing items",
           description: "Please add some clothing items to your wardrobe first",
           variant: "destructive",
+          duration: 3000,
         });
         return;
       }
@@ -442,9 +441,9 @@ export function OutfitProvider({ children }: { children: ReactNode }) {
       if (upperItems.length === 0 || bottomItems.length === 0) {
         toast({
           title: "Incomplete wardrobe",
-          description:
-            "Please add both upper and bottom clothing items to your wardrobe",
+          description: "Please add both upper and bottom clothing items to your wardrobe",
           variant: "destructive",
+          duration: 3000,
         });
         return;
       }
@@ -454,14 +453,16 @@ export function OutfitProvider({ children }: { children: ReactNode }) {
 
       // Generate an outfit for each day of the week
       const newOutfits: Outfit[] = [];
+      const errors: string[] = [];
       
       // Show a temporary toast to indicate generation has started
-      const generatingToast = toast({
+      toast({
         title: "Generating outfits...",
         description: "This may take a moment",
+        duration: 3000,
       });
 
-      // Generate outfits for each day sequentially to avoid overwhelming the API
+      // Generate outfits for each day sequentially
       for (const day of DAYS_OF_WEEK) {
         try {
           const outfit = await generateOutfitForDay(
@@ -474,8 +475,20 @@ export function OutfitProvider({ children }: { children: ReactNode }) {
           newOutfits.push(outfit);
         } catch (error) {
           console.error(`Error generating outfit for ${day}:`, error);
+          errors.push(`Failed to generate outfit for ${day}`);
           // Continue to the next day even if one fails
         }
+      }
+
+      // Only proceed if we have at least some outfits generated
+      if (newOutfits.length === 0) {
+        toast({
+          title: "No outfits generated",
+          description: "Could not generate any outfits. Please check your wardrobe and try again.",
+          variant: "destructive",
+          duration: 5000,
+        });
+        return;
       }
 
       // Delete existing outfits for the user
@@ -498,18 +511,27 @@ export function OutfitProvider({ children }: { children: ReactNode }) {
         setWeeklyOutfits(data);
       }
 
-      // Dismiss the generating toast
-      toast({
-        title: "Weekly outfits generated!",
-        description: "Your AI-powered weekly outfit plan is ready",
-        variant: "default",
-      });
+      // Show appropriate toast based on success/partial success
+      if (errors.length > 0) {
+        toast({
+          title: "Partially generated outfits",
+          description: `Generated ${newOutfits.length} outfits, but had some issues. Check console for details.`,
+          duration: 5000,
+        });
+      } else {
+        toast({
+          title: "Weekly outfits generated!",
+          description: "Your AI-powered weekly outfit plan is ready",
+          duration: 3000,
+        });
+      }
     } catch (error) {
       console.error("Error generating outfits:", error);
       toast({
         title: "Error generating outfits",
         description: "Could not create your weekly outfit plan",
         variant: "destructive",
+        duration: 5000,
       });
     } finally {
       setIsGenerating(false);

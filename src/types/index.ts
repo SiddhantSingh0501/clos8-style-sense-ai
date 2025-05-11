@@ -52,7 +52,7 @@ export interface Outfit {
   upper: ClothingItem;
   bottom: ClothingItem;
   day: DayOfWeek; // Typed day of week
-  createdAt: string;
+  createdAt?: string;
   user_id?: string; // Added for Supabase
   favorite?: boolean; // Flag for favorite outfits
   occasion?: string; // What the outfit is for

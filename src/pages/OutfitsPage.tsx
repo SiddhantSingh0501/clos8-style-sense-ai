@@ -59,7 +59,7 @@ const OutfitDisplay = ({
               <div className="text-sm font-medium text-gray-500 mb-2">Top</div>
               <div className="aspect-square bg-gray-100 rounded-lg overflow-hidden relative">
                 <img
-                  src={outfit.upper.imageUrl}
+                  src={outfit.upper.image_url}
                   alt={outfit.upper.name || "Upper clothing"}
                   className="w-full h-full object-cover"
                   onError={(e) => {
@@ -75,7 +75,7 @@ const OutfitDisplay = ({
               </div>
               <div className="aspect-square bg-gray-100 rounded-lg overflow-hidden relative">
                 <img
-                  src={outfit.bottom.imageUrl}
+                  src={outfit.bottom.image_url}
                   alt={outfit.bottom.name || "Bottom clothing"}
                   className="w-full h-full object-cover"
                   onError={(e) => {

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -42,7 +41,7 @@ const GeminiSetup = () => {
   const handleClear = () => {
     setApiKey('');
     setIsKeySet(false);
-    localStorage.removeItem('GEMINI_API_KEY');
+    localStorage.removeItem('gemini-api-key');
     
     toast({
       title: 'API Key Removed',
