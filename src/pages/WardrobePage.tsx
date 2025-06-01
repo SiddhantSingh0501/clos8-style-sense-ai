@@ -24,9 +24,9 @@ const WardrobePage = () => {
     categories,
     subcategories,
     addClothingItem,
-    deleteClothingItem,
     isLoading,
-    isSubmitting
+    isSubmitting,
+    refreshWardrobe
   } = useWardrobe();
 
   // Debug: log categories and subcategories
@@ -370,16 +370,6 @@ const WardrobePage = () => {
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
                   {filteredItems.map((item: ClothingItem) => (
                     <div key={item.id} className="clothing-card relative group">
-                      <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <Button
-                          variant="destructive"
-                          size="icon"
-                          onClick={() => deleteClothingItem(item.id)}
-                          className="h-8 w-8"
-                        >
-                          <Trash2 size={16} />
-                        </Button>
-                      </div>
                       <div className="h-48 mb-3 bg-gray-100 rounded overflow-hidden">
                         <img
                           src={item.image_url}
@@ -399,7 +389,6 @@ const WardrobePage = () => {
                           style={{ backgroundColor: item.color }}
                         />
                         <span className="text-sm text-gray-600">
-                          {getCategoryName(item.category_id)} ·{" "}
                           {getSubcategoryName(item.subcategory_id)}
                         </span>
                       </div>

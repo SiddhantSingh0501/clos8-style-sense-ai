@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -21,7 +20,7 @@ export function Navbar() {
     <nav className="bg-white border-b border-gray-200 py-4 px-6 shadow-sm">
       <div className="max-w-7xl mx-auto flex items-center justify-between">
         <div className="flex items-center">
-          <Link to="/" className="text-2xl font-bold text-primary">
+          <Link to={user ? "/dashboard" : "/"} className="text-2xl font-bold text-primary">
             Clos8
           </Link>
         </div>

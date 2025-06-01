@@ -36,7 +36,6 @@ interface WardrobeContextType {
     item: Omit<ClothingItem, "id" | "user_id">
   ) => Promise<ClothingItem | null>;
   updateClothingItem: (item: ClothingItem) => Promise<ClothingItem | null>;
-  deleteClothingItem: (id: string) => Promise<boolean>;
   getItemById: (id: string) => ClothingItem | undefined;
   getItemsByType: (type: ClothingType) => ClothingItem[];
   setFilter: (filter: Partial<WardrobeFilter>) => void;
@@ -360,63 +359,6 @@ export function WardrobeProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  // Delete a clothing item
-  const deleteClothingItem = async (id: string): Promise<boolean> => {
-    if (!user) {
-      toast({
-        title: "Authentication required",
-        description: "Please log in to delete clothing items",
-        variant: "destructive",
-      });
-      return false;
-    }
-
-    try {
-      setIsSubmitting(true);
-
-      // First, get the item to delete its image
-      const { data: itemData } = await supabase
-        .from("clothing_items")
-        .select("image_url")
-        .eq("id", id)
-        .eq("user_id", user.id)
-        .single();
-
-      if (itemData?.image_url) {
-        // Delete the image from storage first
-        await deleteImage(itemData.image_url);
-      }
-
-      // Then delete the item itself
-      const { error } = await supabase
-        .from("clothing_items")
-        .delete()
-        .eq("id", id)
-        .eq("user_id", user.id);
-
-      if (error) {
-        throw error;
-      }
-
-      toast({
-        title: "Item deleted",
-        description: "Your clothing item has been removed from your wardrobe",
-      });
-
-      return true;
-    } catch (error) {
-      console.error("Error deleting clothing item:", error);
-      toast({
-        title: "Error deleting item",
-        description: "Could not delete clothing item",
-        variant: "destructive",
-      });
-      return false;
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
   // Get item by ID
   const getItemById = useCallback(
     (id: string) => clothingItems.find((item) => item.id === id),
@@ -475,7 +417,6 @@ export function WardrobeProvider({ children }: { children: ReactNode }) {
         pagination,
         addClothingItem,
         updateClothingItem,
-        deleteClothingItem,
         getItemById,
         getItemsByType,
         setFilter,
